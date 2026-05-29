@@ -1,0 +1,39 @@
+*.egg-info/
+dist/
+build/
+__pycache__/
+*.pyc
+.pytest_cache/
+mempal.yaml
+callosum.yaml
+.venv/
+*.palace/
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite
+*.sqlite3
+*.db
+*.sqlite
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Binaries and Installers
+*.exe
+installer/
+innosetup*.exe

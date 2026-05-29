@@ -1,0 +1,25 @@
+{
+  "default_wing": "wing_general",
+  "wings": {
+    "wing_personal": {
+      "type": "person",
+      "keywords": ["your_name", "personal", "your_last_name"]
+    },
+    "wing_my_webapp": {
+      "type": "project",
+      "keywords": ["my-webapp", "my webapp", "frontend", "react", "dashboard", "api"]
+    },
+    "wing_data_pipeline": {
+      "type": "project",
+      "keywords": ["data-pipeline", "etl", "spark", "airflow", "bigquery", "ingestion"]
+    },
+    "wing_mobile_app": {
+      "type": "project",
+      "keywords": ["mobile-app", "ios", "android", "flutter", "react native", "push notifications"]
+    },
+    "wing_callosum": {
+      "type": "project",
+      "keywords": ["callosum", "memory palace", "chromadb", "palace", "mcp server"]
+    }
+  }
+}
