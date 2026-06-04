@@ -19,6 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 
 def check_stale_drawers(palace_path: str, project_dir: str = None, wing: str = None) -> dict:
@@ -37,6 +38,7 @@ def check_stale_drawers(palace_path: str, project_dir: str = None, wing: str = N
         Dict with stale_files, up_to_date count, and total checked.
     """
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception as e:

@@ -22,6 +22,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 from .config import CallosumConfig
 
@@ -91,6 +92,7 @@ class Layer1:
     def generate(self) -> str:
         """Pull top drawers from ChromaDB and format as compact L1 text."""
         try:
+            fix_palace_before_open(self.palace_path)
             client = chromadb.PersistentClient(path=self.palace_path)
             col = client.get_collection("callosum_drawers")
         except Exception:
@@ -196,6 +198,7 @@ class Layer2:
     def retrieve(self, wing: str = None, room: str = None, n_results: int = 10) -> str:
         """Retrieve drawers filtered by wing and/or room."""
         try:
+            fix_palace_before_open(self.palace_path)
             client = chromadb.PersistentClient(path=self.palace_path)
             col = client.get_collection("callosum_drawers")
         except Exception:
@@ -260,6 +263,7 @@ class Layer3:
     def search(self, query: str, wing: str = None, room: str = None, n_results: int = 5) -> str:
         """Semantic search, returns compact result text."""
         try:
+            fix_palace_before_open(self.palace_path)
             client = chromadb.PersistentClient(path=self.palace_path)
             col = client.get_collection("callosum_drawers")
         except Exception:
@@ -316,6 +320,7 @@ class Layer3:
     ) -> list:
         """Return raw dicts instead of formatted text."""
         try:
+            fix_palace_before_open(self.palace_path)
             client = chromadb.PersistentClient(path=self.palace_path)
             col = client.get_collection("callosum_drawers")
         except Exception:
@@ -437,6 +442,7 @@ class MemoryStack:
 
         # Count drawers
         try:
+            fix_palace_before_open(self.palace_path)
             client = chromadb.PersistentClient(path=self.palace_path)
             col = client.get_collection("callosum_drawers")
             count = col.count()

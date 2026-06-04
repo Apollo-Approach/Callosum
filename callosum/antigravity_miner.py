@@ -29,6 +29,7 @@ import urllib.error
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 import chromadb
 from .config import CallosumConfig
+from .chroma_compat import fix_palace_before_open
 
 # File types we can mine
 ARTIFACT_EXTENSIONS = {".md", ".txt"}
@@ -46,6 +47,7 @@ MIN_CONTENT_LENGTH = 50
 def get_collection(palace_path: str):
     """Get or create the callosum_drawers collection."""
     os.makedirs(palace_path, exist_ok=True)
+    fix_palace_before_open(palace_path)
     client = chromadb.PersistentClient(path=palace_path)
     try:
         return client.get_collection("callosum_drawers")
@@ -634,6 +636,7 @@ def garbage_collect_antigravity(palace_path: str, brain_path: str, dry_run: bool
     print(f"{'-' * 55}\n")
 
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception:

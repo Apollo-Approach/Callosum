@@ -20,11 +20,13 @@ from .config import CallosumConfig
 from .isolation import is_linked
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 
 def _get_collection(config=None):
     config = config or CallosumConfig()
     try:
+        fix_palace_before_open(config.palace_path)
         client = chromadb.PersistentClient(path=config.palace_path)
         return client.get_collection(config.collection_name)
     except Exception:

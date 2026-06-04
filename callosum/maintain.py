@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 from .config import CallosumConfig
 from .miner import mine, garbage_collect
@@ -97,6 +98,7 @@ def closet_coverage(palace_path: str) -> dict:
     Returns stats on callosum_drawers vs callosum_closets.
     """
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
     except Exception:
         return {"error": "No palace found"}
@@ -141,6 +143,7 @@ def check_chromadb_version(palace_path: str) -> dict:
     current_version = chromadb.__version__
 
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         # Try to access the collection -- if this works, the format is compatible
         col = client.get_collection("callosum_drawers")
@@ -196,6 +199,7 @@ def migrate_chromadb(palace_path: str, backup: bool = True) -> dict:
 
     try:
         # ChromaDB handles migration automatically on PersistentClient creation
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_or_create_collection("callosum_drawers")
         count = col.count()
@@ -244,6 +248,7 @@ def health_check(palace_path: str, workspaces_dir: str = None) -> dict:
 
     # 3. Wing breakdown
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
         all_meta = col.get(include=["metadatas"])["metadatas"]

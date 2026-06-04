@@ -23,6 +23,7 @@ import re
 from pathlib import Path
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 # -- Constants (upstream v3.3.1) ----------------------------------------
 
@@ -106,6 +107,7 @@ _ENTITY_STOPLIST = frozenset(
 
 def get_closets_collection(palace_path: str, create: bool = True):
     """Get the closets ChromaDB collection."""
+    fix_palace_before_open(palace_path)
     client = chromadb.PersistentClient(path=palace_path)
     if create:
         return client.get_or_create_collection("callosum_closets")
@@ -356,6 +358,7 @@ def closet_search(
 
     # Hydrate drawers
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         drawers_col = client.get_collection("callosum_drawers")
         hydrated = drawers_col.get(

@@ -205,6 +205,7 @@ def cmd_status(args):
 def cmd_repair(args):
     """Rebuild palace vector index from SQLite metadata."""
     import chromadb
+    from .chroma_compat import fix_palace_before_open
     import shutil
 
     palace_path = os.path.expanduser(args.palace) if args.palace else CallosumConfig().palace_path
@@ -220,6 +221,7 @@ def cmd_repair(args):
 
     # Try to read existing drawers
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
         total = col.count()

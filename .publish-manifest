@@ -1,0 +1,31 @@
+# Files and directories to include in the public release.
+# One path per line. Directories include all contents recursively.
+# Lines starting with # are comments.
+
+# Core package
+callosum/
+
+# Tests
+tests/
+
+# Config templates
+config_templates/
+
+# Git hooks
+hooks/
+
+# CI/CD
+.github/
+
+# Root files
+README.md
+CONTRIBUTING.md
+ARCHITECTURE.md
+LICENSE
+SECURITY.md
+CHANGELOG.md
+pyproject.toml
+setup.cfg
+.gitignore
+.pre-commit-config.yaml
+.python-version

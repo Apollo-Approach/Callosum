@@ -20,6 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 import chromadb
+from .chroma_compat import fix_palace_before_open
 
 
 # -- BM25 implementation -----------------------------------------------
@@ -173,6 +174,7 @@ def search(query: str, palace_path: str, wing: str = None, room: str = None, n_r
     Uses hybrid vector + BM25 scoring.
     """
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception as e:
@@ -285,6 +287,7 @@ def search_memories(
 
     # Fallback: hybrid vector + BM25
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception as e:
