@@ -53,10 +53,10 @@ class TestHandleRequest:
         resp = handle_request({"method": "tools/list", "id": 2, "params": {}})
         tools = resp["result"]["tools"]
         names = {t["name"] for t in tools}
-        assert "Callosum_status" in names
+        assert "Callosum_taxonomy" in names
         assert "Callosum_search" in names
-        assert "Callosum_add_drawer" in names
-        assert "Callosum_kg_add" in names
+        assert "Callosum_drawer" in names
+        assert "Callosum_kg" in names
 
     def test_unknown_tool(self):
         from callosum.mcp_server import handle_request
@@ -87,7 +87,7 @@ class TestHandleRequest:
             {
                 "method": "tools/call",
                 "id": 5,
-                "params": {"name": "Callosum_status", "arguments": {}},
+                "params": {"name": "Callosum_taxonomy", "arguments": {"action": "status"}},
             }
         )
         assert "result" in resp
@@ -167,7 +167,7 @@ class TestSearchTool:
         _patch_mcp_server(monkeypatch, config, palace_path, kg)
         from callosum.mcp_server import tool_search
 
-        result = tool_search(query="JWT authentication tokens")
+        result = tool_search(query="JWT authentication tokens", wing="project")
         assert "results" in result
         assert len(result["results"]) > 0
         # Top result should be the auth drawer
@@ -185,7 +185,7 @@ class TestSearchTool:
         _patch_mcp_server(monkeypatch, config, palace_path, kg)
         from callosum.mcp_server import tool_search
 
-        result = tool_search(query="database", room="backend")
+        result = tool_search(query="database", wing="project", room="backend")
         assert all(r["room"] == "backend" for r in result["results"])
 
 
