@@ -37,3 +37,9 @@ Thumbs.db
 *.exe
 installer/
 innosetup*.exe
+
+# Data and Scratch (do not commit test scripts or research data)
+scratch/
+research/
+test_scripts/
+data/
