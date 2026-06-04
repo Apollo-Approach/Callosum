@@ -16,6 +16,7 @@ from datetime import datetime
 from collections import defaultdict
 
 import chromadb
+from .chroma_compat import fix_palace_before_open, validate_palace_fts5
 
 from .normalize import normalize
 
@@ -213,6 +214,7 @@ def detect_convo_room(content: str) -> str:
 
 def get_collection(palace_path: str):
     os.makedirs(palace_path, exist_ok=True)
+    fix_palace_before_open(palace_path)
     client = chromadb.PersistentClient(path=palace_path)
     try:
         return client.get_collection("callosum_drawers")
@@ -393,6 +395,14 @@ def mine_convos(
             print(f"    {room:20} {count} files")
     print('\n  Next: Callosum search "what you\'re looking for"')
     print(f"{'=' * 55}\n")
+
+    # Post-mine FTS5 / SQLite integrity check (#1537).
+    if not dry_run:
+        try:
+            validate_palace_fts5(palace_path)
+        except Exception as e:
+            print(f"\n  ⚠  Post-mine integrity warning: {e}")
+            print("     Run: Callosum repair-status for details.")
 
 
 if __name__ == "__main__":

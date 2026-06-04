@@ -17,6 +17,8 @@ Usage:
 
 import re
 import os
+import json
+import functools
 from pathlib import Path
 from collections import defaultdict
 
@@ -395,6 +397,98 @@ STOPWORDS = {
     "inference",
 }
 
+
+# ==================== COCA CONTENT-WORD FILTER (Tier 2 linguistics cleanup) ====================
+#
+# Common English content words that frequently appear capitalized (sentence
+# start, headings, markdown emphasis) but are NOT proper nouns. Filtering
+# these at candidate-extraction time prevents false-positive entity detection
+# of words like "Code", "Brutal", "Phase", "Chat", "Note", "Line", etc.
+#
+# The data file lives at ``callosum/data/coca_content_words.json``. Loaded
+# once on first call via ``_get_coca_filter``. Matching is case-insensitive:
+# callers must lowercase the candidate before lookup.
+
+
+@functools.lru_cache(maxsize=1)
+def _get_coca_filter() -> frozenset[str]:
+    """Return the COCA content-word filter set (lowercased).
+
+    Loads ``callosum/data/coca_content_words.json`` on first call and
+    caches the resulting frozenset. Subsequent calls are O(1). Returns
+    an empty frozenset if the data file is missing or malformed —
+    extraction behavior then degrades gracefully (no filter applied)
+    rather than crashing.
+    """
+    data_path = Path(__file__).parent / "data" / "coca_content_words.json"
+    try:
+        raw = json.loads(data_path.read_text(encoding="utf-8"))
+        words = raw.get("words", [])
+        return frozenset(w.lower() for w in words if isinstance(w, str))
+    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+        return frozenset()
+
+
+# ==================== KNOWN-SYSTEMS COMPOUND LEXICON (Tier 3 linguistics cleanup) ====================
+#
+# Multi-word product / system names that must be detected atomically — NOT
+# decomposed into their constituent words. When "Claude Code" appears in
+# content, the entity detector counts the compound, not the parts.
+#
+# Data file: ``callosum/data/known_systems.json``.
+
+
+@functools.lru_cache(maxsize=1)
+def _get_known_systems() -> tuple[tuple[str, "re.Pattern[str]"], ...]:
+    """Return the known-systems compound tuple — pairs of (canonical name,
+    pre-compiled case-insensitive word-bounded regex).
+
+    Loads ``callosum/data/known_systems.json`` on first call, compiles a
+    regex for each valid compound, and caches the resulting tuple.
+    Entries are sorted by length descending so longest-match-wins.
+    """
+    data_path = Path(__file__).parent / "data" / "known_systems.json"
+    try:
+        raw = json.loads(data_path.read_text(encoding="utf-8"))
+        compounds = raw.get("compounds", [])
+        valid = [c for c in compounds if isinstance(c, str) and c.strip()]
+        sorted_compounds = sorted(valid, key=len, reverse=True)
+
+        compiled: list[tuple[str, re.Pattern[str]]] = []
+        for c in sorted_compounds:
+            pattern = r"(?<!\w)" + re.escape(c) + r"(?!\w)"
+            try:
+                compiled.append((c, re.compile(pattern, re.IGNORECASE)))
+            except re.error:
+                continue
+        return tuple(compiled)
+    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+        return ()
+
+
+def _apply_known_systems_prepass(text: str) -> tuple[str, dict[str, int]]:
+    """Scan ``text`` for known-systems compounds, return a working copy
+    with matched spans masked to whitespace plus a dict of detected
+    compound counts.
+    """
+    compounds = _get_known_systems()
+    if not compounds:
+        return text, {}
+    working = text
+    compound_counts: dict[str, int] = {}
+    for compound, rx in compounds:
+        matches = list(rx.finditer(working))
+        if not matches:
+            continue
+        compound_counts[compound] = compound_counts.get(compound, 0) + len(matches)
+        # Mask matched spans with spaces so subsequent regex passes
+        # don't re-decompose. Replacing right-to-left keeps earlier
+        # indices stable.
+        for m in reversed(matches):
+            start, end = m.span()
+            working = working[:start] + (" " * (end - start)) + working[end:]
+    return working, compound_counts
+
 # For entity detection -- prose only, no code files
 # Code files have too many capitalized names (classes, functions) that aren't entities
 PROSE_EXTENSIONS = {
@@ -444,17 +538,42 @@ def extract_candidates(text: str) -> dict:
     """
     Extract all capitalized proper noun candidates from text.
     Returns {name: frequency} for names appearing 3+ times.
+
+    Applies three linguistics filters:
+      - Tier 1: STOPWORDS (hardcoded common words)
+      - Tier 2: COCA content-word filter (data/coca_content_words.json)
+      - Tier 3: Known-systems compound prepass (data/known_systems.json)
     """
-    # Find all capitalized words (not at sentence start -- harder, so we use frequency as filter)
-    raw = re.findall(r"\b([A-Z][a-z]{1,19})\b", text)
+    coca_filter = _get_coca_filter()
+
+    # Tier 3 — known-systems compound pre-pass. Find compound product names
+    # ("Claude Code", "GitHub Copilot", ...) FIRST and mask them out of the
+    # working text so the subsequent single-word + multi-word loops don't
+    # re-decompose them into their constituent tokens.
+    working_text, compound_counts = _apply_known_systems_prepass(text)
 
     counts = defaultdict(int)
+    # Seed counts with detected compounds
+    for compound, n in compound_counts.items():
+        counts[compound] += n
+
+    # Find all capitalized words (not at sentence start -- harder, so we use frequency as filter)
+    raw = re.findall(r"\b([A-Z][a-z]{1,19})\b", working_text)
+
     for word in raw:
-        if word.lower() not in STOPWORDS and len(word) > 1:
+        wl = word.lower()
+        if wl in STOPWORDS:
+            continue
+        # Tier 2: block common English content words
+        if wl in coca_filter:
+            continue
+        if len(word) > 1:
             counts[word] += 1
 
-    # Also find multi-word proper nouns (e.g. "Memory Palace", "Claude Code")
-    multi = re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", text)
+    # Also find multi-word proper nouns (e.g. "Memory Palace", "Jane Smith")
+    # Runs against working_text (compounds already masked) so unknown
+    # two-word phrases still get caught without competing with known compounds.
+    multi = re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", working_text)
     for phrase in multi:
         if not any(w.lower() in STOPWORDS for w in phrase.split()):
             counts[phrase] += 1

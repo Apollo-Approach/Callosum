@@ -23,6 +23,7 @@ from .closet import (
 
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 import chromadb
+from .chroma_compat import fix_palace_before_open, validate_palace_fts5
 
 READABLE_EXTENSIONS = {
     ".txt",
@@ -402,6 +403,7 @@ def chunk_text(content: str, source_file: str) -> list:
 
 def get_collection(palace_path: str):
     os.makedirs(palace_path, exist_ok=True)
+    fix_palace_before_open(palace_path)
     client = chromadb.PersistentClient(path=palace_path)
     try:
         return client.get_collection("callosum_drawers")
@@ -745,6 +747,14 @@ def mine(
     print('\n  Next: Callosum search "what you\'re looking for"')
     print(f"{'=' * 55}\n")
 
+    # Post-mine FTS5 / SQLite integrity check (#1537).
+    if not dry_run:
+        try:
+            validate_palace_fts5(palace_path)
+        except Exception as e:
+            print(f"\n  ⚠  Post-mine integrity warning: {e}")
+            print("     Run: Callosum repair-status for details.")
+
 
 # =============================================================================
 # STATUS
@@ -754,6 +764,7 @@ def mine(
 def status(palace_path: str):
     """Show what's been filed in the palace."""
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception:
@@ -797,6 +808,7 @@ def garbage_collect(palace_path: str, project_dir: str, wing: str, dry_run: bool
     print(f"{'-' * 55}\n")
 
     try:
+        fix_palace_before_open(palace_path)
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("callosum_drawers")
     except Exception:

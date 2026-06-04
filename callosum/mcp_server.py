@@ -21,6 +21,7 @@ import sys
 import io
 import json
 import os
+import re
 import logging
 import hashlib
 from datetime import datetime
@@ -41,6 +42,7 @@ from .version import __version__  # noqa: E402
 from .searcher import search_memories  # noqa: E402
 from .palace_graph import traverse, find_tunnels, graph_stats  # noqa: E402
 import chromadb  # noqa: E402
+from .chroma_compat import fix_palace_before_open  # noqa: E402
 
 from .knowledge_graph import KnowledgeGraph  # noqa: E402
 from .backlog import Backlog  # noqa: E402
@@ -80,6 +82,9 @@ logger = logging.getLogger("Callosum_mcp")
 _config = CallosumConfig()
 
 
+_LONE_SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
+
+
 def _clean(text: str) -> str:
     """Remove lone surrogates that break UTF-8 encoding (issue #1235).
 
@@ -88,11 +93,10 @@ def _clean(text: str) -> str:
     raises UnicodeEncodeError on these; ChromaDB's add() / upsert()
     then crashes with -32000 Internal Error.
 
-    Replace lone surrogates with U+FFFD (REPLACEMENT CHARACTER) so
-    the string is legal UTF-8 while preserving as much content as
-    possible.
+    Uses a pre-compiled regex (ported from upstream) for faster repeated
+    calls vs the previous encode/decode roundtrip.
     """
-    return text.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+    return _LONE_SURROGATE_RE.sub("\ufffd", text)
 
 
 _chroma_client = None
@@ -104,6 +108,7 @@ def _get_collection(create=False):
     global _chroma_client, _chroma_collection
     try:
         if _chroma_client is None:
+            fix_palace_before_open(_config.palace_path)
             _chroma_client = chromadb.PersistentClient(path=_config.palace_path)
         if create:
             _chroma_collection = _chroma_client.get_or_create_collection(_config.collection_name)
