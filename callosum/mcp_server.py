@@ -727,444 +727,250 @@ def tool_maintain(**kwargs):
     return result
 
 
+
+def dispatch_taxonomy(action: str, wing: str = None):
+    if action == "status":
+        return tool_status()
+    elif action == "list_wings":
+        return tool_list_wings()
+    elif action == "list_rooms":
+        return tool_list_rooms(wing)
+    elif action == "get_taxonomy":
+        return tool_get_taxonomy()
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_kg(action: str, **kwargs):
+    if action == "query":
+        return tool_kg_query(**kwargs)
+    elif action == "add":
+        return tool_kg_add(**kwargs)
+    elif action == "invalidate":
+        return tool_kg_invalidate(**kwargs)
+    elif action == "timeline":
+        return tool_kg_timeline(**kwargs)
+    elif action == "stats":
+        return tool_kg_stats()
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_graph(action: str, **kwargs):
+    if action == "traverse":
+        return tool_traverse_graph(**kwargs)
+    elif action == "find_tunnels":
+        return tool_find_tunnels(**kwargs)
+    elif action == "graph_stats":
+        return tool_graph_stats()
+    elif action == "list_hallways":
+        return tool_list_hallways(**kwargs)
+    elif action == "compute_hallways":
+        return tool_compute_hallways(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_drawer(action: str, **kwargs):
+    if action == "add":
+        return tool_add_drawer(**kwargs)
+    elif action == "delete":
+        return tool_delete_drawer(**kwargs)
+    elif action == "check_duplicate":
+        return tool_check_duplicate(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_diary(action: str, **kwargs):
+    if action == "read":
+        return tool_diary_read(**kwargs)
+    elif action == "write":
+        return tool_diary_write(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_open_loops(action: str, **kwargs):
+    if action == "add":
+        return tool_add_open_loop(**kwargs)
+    elif action == "get":
+        return tool_get_backlog(**kwargs)
+    elif action == "resolve":
+        return tool_resolve_open_loop(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_blueprints(action: str, **kwargs):
+    if action == "save":
+        return tool_save_blueprint(**kwargs)
+    elif action == "load":
+        return tool_load_blueprint(**kwargs)
+    elif action == "list":
+        return tool_list_blueprints(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
+def dispatch_admin(action: str, **kwargs):
+    if action == "check_stale":
+        return tool_check_stale(**kwargs)
+    elif action == "check_engram_drift":
+        return tool_check_engram_drift(**kwargs)
+    elif action == "link_wings":
+        return tool_link_wings(**kwargs)
+    elif action == "unlink_wings":
+        return tool_unlink_wings(**kwargs)
+    elif action == "isolation_report":
+        return tool_isolation_report()
+    elif action == "health_check":
+        return tool_health_check()
+    elif action == "maintain":
+        return tool_maintain(**kwargs)
+    else:
+        raise ValueError(f"Unknown action: {action}")
+
 TOOLS = {
-    "Callosum_status": {
-        "description": "Palace overview -- total drawers, wing and room counts",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_status,
-    },
-    "Callosum_list_wings": {
-        "description": "List all wings with drawer counts",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_list_wings,
-    },
-    "Callosum_list_rooms": {
-        "description": "List rooms within a wing (or all rooms if no wing given)",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Wing to list rooms for (optional)"},
-            },
-        },
-        "handler": tool_list_rooms,
-    },
-    "Callosum_get_taxonomy": {
-        "description": "Full taxonomy: wing -> room -> drawer count",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_get_taxonomy,
-    },
-    "Callosum_kg_query": {
-        "description": "Query the knowledge graph for an entity's relationships. Returns typed facts with temporal validity. E.g. 'Max' -> child_of Alice, loves chess, does swimming. Filter by date with as_of to see what was true at a point in time.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "entity": {
-                    "type": "string",
-                    "description": "Entity to query (e.g. 'Max', 'MyProject', 'Alice')",
-                },
-                "as_of": {
-                    "type": "string",
-                    "description": "Date filter -- only facts valid at this date (YYYY-MM-DD, optional)",
-                },
-                "direction": {
-                    "type": "string",
-                    "description": "outgoing (entity->?), incoming (?->entity), or both (default: both)",
-                },
-            },
-            "required": ["entity"],
-        },
-        "handler": tool_kg_query,
-    },
-    "Callosum_kg_add": {
-        "description": "Add a fact to the knowledge graph. Subject -> predicate -> object with optional time window. E.g. ('Max', 'started_school', 'Year 7', valid_from='2026-09-01').",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "subject": {"type": "string", "description": "The entity doing/being something"},
-                "predicate": {
-                    "type": "string",
-                    "description": "The relationship type (e.g. 'loves', 'works_on', 'daughter_of')",
-                },
-                "object": {"type": "string", "description": "The entity being connected to"},
-                "valid_from": {
-                    "type": "string",
-                    "description": "When this became true (YYYY-MM-DD, optional)",
-                },
-                "source_closet": {
-                    "type": "string",
-                    "description": "Closet ID where this fact appears (optional)",
-                },
-                "source": {
-                    "type": "string",
-                    "description": "Source of the fact (e.g. 'User via Telegram', 'Source Code Analysis') (optional)",
-                },
-                "confidence_score": {
-                    "type": "number",
-                    "description": "Confidence in this fact, 0.0 to 1.0 (default: 1.0)",
-                },
-            },
-            "required": ["subject", "predicate", "object"],
-        },
-        "handler": tool_kg_add,
-    },
-    "Callosum_kg_invalidate": {
-        "description": "Mark a fact as no longer true. E.g. ankle injury resolved, job ended, moved house.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "subject": {"type": "string", "description": "Entity"},
-                "predicate": {"type": "string", "description": "Relationship"},
-                "object": {"type": "string", "description": "Connected entity"},
-                "ended": {
-                    "type": "string",
-                    "description": "When it stopped being true (YYYY-MM-DD, default: today)",
-                },
-            },
-            "required": ["subject", "predicate", "object"],
-        },
-        "handler": tool_kg_invalidate,
-    },
-    "Callosum_kg_timeline": {
-        "description": "Chronological timeline of facts. Shows the story of an entity (or everything) in order.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "entity": {
-                    "type": "string",
-                    "description": "Entity to get timeline for (optional -- omit for full timeline)",
-                },
-            },
-        },
-        "handler": tool_kg_timeline,
-    },
-    "Callosum_kg_stats": {
-        "description": "Knowledge graph overview: entities, triples, current vs expired facts, relationship types.",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_kg_stats,
-    },
-    "Callosum_traverse": {
-        "description": "Walk the palace graph from a room. Shows connected ideas across wings -- the tunnels. Like following a thread through the palace: start at 'chromadb-setup' in wing_code, discover it connects to wing_myproject (planning) and wing_user (feelings about it).",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "start_room": {
-                    "type": "string",
-                    "description": "Room to start from (e.g. 'chromadb-setup', 'riley-school')",
-                },
-                "max_hops": {
-                    "type": "integer",
-                    "description": "How many connections to follow (default: 2)",
-                },
-            },
-            "required": ["start_room"],
-        },
-        "handler": tool_traverse_graph,
-    },
-    "Callosum_find_tunnels": {
-        "description": "Find rooms that bridge two wings -- the hallways connecting different domains. E.g. what topics connect wing_code to wing_team?",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing_a": {"type": "string", "description": "First wing (optional)"},
-                "wing_b": {"type": "string", "description": "Second wing (optional)"},
-            },
-        },
-        "handler": tool_find_tunnels,
-    },
-    "Callosum_graph_stats": {
-        "description": "Palace graph overview: total rooms, tunnel connections, edges between wings.",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_graph_stats,
-    },
-    "Callosum_list_hallways": {
-        "description": "List entity-to-entity connections (hallways) within a wing. These reveal within-wing relationships dynamically computed from co-occurrences.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Wing to list hallways for (optional)"},
-            },
-        },
-        "handler": tool_list_hallways,
-    },
-    "Callosum_compute_hallways": {
-        "description": "Compute and update intra-wing hallways (entity connections) for a specific wing. Run this to update the dynamics (potentiation/decay) of entity connections.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Wing to compute hallways for"},
-            },
-            "required": ["wing"],
-        },
-        "handler": tool_compute_hallways,
-    },
     "Callosum_search": {
-        "description": "Semantic search. Returns verbatim drawer content with similarity scores. To ensure strict isolation between projects (the Iron Curtain), you MUST provide a specific wing.",
+        "description": "Semantic search. Returns verbatim drawer content with similarity scores. MUST provide a specific wing for project isolation (Iron Curtain).",
         "input_schema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "What to search for"},
                 "limit": {"type": "integer", "description": "Max results (default 5)"},
-                "wing": {
-                    "type": "string",
-                    "description": "Filter by wing to enforce strict project boundaries (Iron Curtain)",
-                },
+                "wing": {"type": "string", "description": "Filter by wing"},
                 "room": {"type": "string", "description": "Filter by room (optional)"},
             },
             "required": ["query", "wing"],
         },
         "handler": tool_search,
     },
-    "Callosum_check_duplicate": {
-        "description": "Check if content already exists in the palace before filing",
+    "Callosum_taxonomy": {
+        "description": "Palace taxonomy & status. Actions: status (overview), list_wings, list_rooms, get_taxonomy (full tree).",
         "input_schema": {
             "type": "object",
             "properties": {
-                "content": {"type": "string", "description": "Content to check"},
-                "threshold": {
-                    "type": "number",
-                    "description": "Similarity threshold 0-1 (default 0.9)",
-                },
+                "action": {"type": "string", "enum": ["status", "list_wings", "list_rooms", "get_taxonomy"]},
+                "wing": {"type": "string", "description": "Wing to filter on (for list_rooms)"}
             },
-            "required": ["content"],
+            "required": ["action"]
         },
-        "handler": tool_check_duplicate,
+        "handler": dispatch_taxonomy,
     },
-    "Callosum_add_drawer": {
-        "description": "File verbatim content into the palace. Checks for duplicates first.",
+    "Callosum_kg": {
+        "description": "Knowledge graph operations. Actions: query (entity relationships), add (add a fact), invalidate (end a fact), timeline (chronological story), stats.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "wing": {"type": "string", "description": "Wing (project name)"},
-                "room": {
-                    "type": "string",
-                    "description": "Room (aspect: backend, decisions, meetings...)",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Verbatim content to store -- exact words, never summarized",
-                },
-                "source_file": {"type": "string", "description": "Where this came from (optional)"},
-                "added_by": {"type": "string", "description": "Who is filing this (default: mcp)"},
+                "action": {"type": "string", "enum": ["query", "add", "invalidate", "timeline", "stats"]},
+                "entity": {"type": "string"},
+                "subject": {"type": "string"},
+                "predicate": {"type": "string"},
+                "object": {"type": "string"},
+                "as_of": {"type": "string"},
+                "direction": {"type": "string"},
+                "valid_from": {"type": "string"},
+                "source_closet": {"type": "string"},
+                "source": {"type": "string"},
+                "confidence_score": {"type": "number"},
+                "ended": {"type": "string"}
             },
-            "required": ["wing", "room", "content"],
+            "required": ["action"]
         },
-        "handler": tool_add_drawer,
+        "handler": dispatch_kg,
     },
-    "Callosum_delete_drawer": {
-        "description": "Delete a drawer by ID. Irreversible.",
+    "Callosum_graph": {
+        "description": "Graph & tunnel operations. Actions: traverse (walk connections), find_tunnels (bridges between wings), graph_stats, list_hallways, compute_hallways.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "drawer_id": {"type": "string", "description": "ID of the drawer to delete"},
+                "action": {"type": "string", "enum": ["traverse", "find_tunnels", "graph_stats", "list_hallways", "compute_hallways"]},
+                "start_room": {"type": "string"},
+                "max_hops": {"type": "integer"},
+                "wing": {"type": "string"},
+                "wing_a": {"type": "string"},
+                "wing_b": {"type": "string"}
             },
-            "required": ["drawer_id"],
+            "required": ["action"]
         },
-        "handler": tool_delete_drawer,
+        "handler": dispatch_graph,
     },
-    "Callosum_diary_write": {
-        "description": "Write to your personal agent diary. Your observations, thoughts, what you worked on, what matters. Each agent has their own diary with full history.",
+    "Callosum_drawer": {
+        "description": "Drawer operations. Actions: add (file content), delete (remove by ID), check_duplicate.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "agent_name": {
-                    "type": "string",
-                    "description": "Your name -- each agent gets their own diary wing",
-                },
-                "entry": {
-                    "type": "string",
-                    "description": "Your diary entry -- observations, decisions, context",
-                },
-                "topic": {
-                    "type": "string",
-                    "description": "Topic tag (optional, default: general)",
-                },
+                "action": {"type": "string", "enum": ["add", "delete", "check_duplicate"]},
+                "wing": {"type": "string"},
+                "room": {"type": "string"},
+                "content": {"type": "string"},
+                "source_file": {"type": "string"},
+                "added_by": {"type": "string"},
+                "drawer_id": {"type": "string"},
+                "threshold": {"type": "number"}
             },
-            "required": ["agent_name", "entry"],
+            "required": ["action"]
         },
-        "handler": tool_diary_write,
+        "handler": dispatch_drawer,
     },
-    "Callosum_diary_read": {
-        "description": "Read your recent diary entries. See what past versions of yourself recorded -- your journal across sessions.",
+    "Callosum_diary": {
+        "description": "Agent diary operations. Actions: read (recent entries), write (add entry).",
         "input_schema": {
             "type": "object",
             "properties": {
-                "agent_name": {
-                    "type": "string",
-                    "description": "Your name -- each agent gets their own diary wing",
-                },
-                "last_n": {
-                    "type": "integer",
-                    "description": "Number of recent entries to read (default: 10)",
-                },
+                "action": {"type": "string", "enum": ["read", "write"]},
+                "agent_name": {"type": "string"},
+                "entry": {"type": "string"},
+                "topic": {"type": "string"},
+                "last_n": {"type": "integer"}
             },
-            "required": ["agent_name"],
+            "required": ["action", "agent_name"]
         },
-        "handler": tool_diary_read,
+        "handler": dispatch_diary,
     },
-    "Callosum_check_stale": {
-        "description": "Check for stale drawers whose source files have changed since last mine. Detects drift.",
+    "Callosum_open_loops": {
+        "description": "Task tracking. Actions: add (new task), get (view backlog), resolve.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "wing": {"type": "string", "description": "Optional wing filter"},
-                "project_dir": {
-                    "type": "string",
-                    "description": "Project directory to resolve file paths",
-                },
+                "action": {"type": "string", "enum": ["add", "get", "resolve"]},
+                "wing": {"type": "string"},
+                "room": {"type": "string"},
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "status": {"type": "string"},
+                "loop_id": {"type": "string"}
             },
+            "required": ["action"]
         },
-        "handler": tool_check_stale,
+        "handler": dispatch_open_loops,
     },
-    "Callosum_check_engram_drift": {
-        "description": "Check if Engram Protocol reference files have drifted from palace. Tier 2 integration.",
+    "Callosum_blueprints": {
+        "description": "Architectural blueprints. Actions: save, load, list.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "engram_dir": {
-                    "type": "string",
-                    "description": "Path to knowledge/ dir (default: ~/.gemini/antigravity/knowledge)",
-                },
+                "action": {"type": "string", "enum": ["save", "load", "list"]},
+                "wing": {"type": "string"},
+                "name": {"type": "string"},
+                "content": {"type": "string"}
             },
+            "required": ["action"]
         },
-        "handler": tool_check_engram_drift,
+        "handler": dispatch_blueprints,
     },
-    "Callosum_link_wings": {
-        "description": "Create an explicit opt-in tunnel link between two project wings. Required before cross-wing traversal or search can cross the boundary. E.g. link project_a to project_b so they can share compliance context.",
+    "Callosum_admin": {
+        "description": "System administration. Actions: check_stale, check_engram_drift, link_wings, unlink_wings, isolation_report, health_check, maintain.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "wing_a": {"type": "string", "description": "First wing to link"},
-                "wing_b": {"type": "string", "description": "Second wing to link"},
-                "reason": {
-                    "type": "string",
-                    "description": "Why these wings should share context (optional)",
-                },
+                "action": {"type": "string", "enum": ["check_stale", "check_engram_drift", "link_wings", "unlink_wings", "isolation_report", "health_check", "maintain"]},
+                "wing": {"type": "string"},
+                "project_dir": {"type": "string"},
+                "engram_dir": {"type": "string"},
+                "wing_a": {"type": "string"},
+                "wing_b": {"type": "string"},
+                "reason": {"type": "string"},
+                "auto_fix": {"type": "boolean"}
             },
-            "required": ["wing_a", "wing_b"],
+            "required": ["action"]
         },
-        "handler": tool_link_wings,
-    },
-    "Callosum_unlink_wings": {
-        "description": "Revoke a tunnel link between two wings. Stops cross-wing traversal and search from crossing this boundary.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing_a": {"type": "string", "description": "First wing"},
-                "wing_b": {"type": "string", "description": "Second wing"},
-            },
-            "required": ["wing_a", "wing_b"],
-        },
-        "handler": tool_unlink_wings,
-    },
-    "Callosum_isolation_report": {
-        "description": "Show the current wing isolation posture: which projects are isolated, which are linked, and why.",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_isolation_report,
-    },
-    "Callosum_health_check": {
-        "description": "Comprehensive health check: ChromaDB version, drawer/closet counts, wing isolation, stale files, schedule status.",
-        "input_schema": {"type": "object", "properties": {}},
-        "handler": tool_health_check,
-    },
-    "Callosum_maintain": {
-        "description": "Run automated maintenance: stale remediation, GC orphaned drawers, closet coverage. Set auto_fix=true to auto-fix.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "auto_fix": {
-                    "type": "boolean",
-                    "description": "Auto-fix stale files and migrate ChromaDB",
-                },
-            },
-        },
-        "handler": tool_maintain,
-    },
-    "Callosum_add_open_loop": {
-        "description": "Add a new open loop to the backlog. Use this to defer tasks, bugs, or ideas for later.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Wing (project) this loop belongs to"},
-                "room": {"type": "string", "description": "Room (aspect) this loop belongs to"},
-                "title": {"type": "string", "description": "Short title of the task/loop"},
-                "description": {
-                    "type": "string",
-                    "description": "Detailed description of the task/loop (optional)",
-                },
-            },
-            "required": ["wing", "room", "title"],
-        },
-        "handler": tool_add_open_loop,
-    },
-    "Callosum_get_backlog": {
-        "description": "Retrieve backlog items to see what was deferred or left open.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Optional wing filter"},
-                "status": {
-                    "type": "string",
-                    "description": "Status to filter by ('open', 'resolved', 'all') (default: 'open')",
-                },
-            },
-        },
-        "handler": tool_get_backlog,
-    },
-    "Callosum_resolve_open_loop": {
-        "description": "Mark an open loop as resolved.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "loop_id": {"type": "string", "description": "ID of the loop to resolve"},
-            },
-            "required": ["loop_id"],
-        },
-        "handler": tool_resolve_open_loop,
-    },
-    "Callosum_save_blueprint": {
-        "description": "Save or overwrite an architectural blueprint (system map, topology). Payload can be arbitrary Markdown or JSON.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {
-                    "type": "string",
-                    "description": "Wing (project) this blueprint belongs to",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Name of the blueprint (e.g. 'auth_flow', 'database_schema')",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "The payload (Markdown, JSON, diagram)",
-                },
-            },
-            "required": ["wing", "name", "content"],
-        },
-        "handler": tool_save_blueprint,
-    },
-    "Callosum_load_blueprint": {
-        "description": "Retrieve a specific architectural blueprint.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Wing (project)"},
-                "name": {"type": "string", "description": "Name of the blueprint"},
-            },
-            "required": ["wing", "name"],
-        },
-        "handler": tool_load_blueprint,
-    },
-    "Callosum_list_blueprints": {
-        "description": "List all available architectural blueprints.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wing": {"type": "string", "description": "Optional wing filter"},
-            },
-        },
-        "handler": tool_list_blueprints,
-    },
+        "handler": dispatch_admin,
+    }
 }
 
 
