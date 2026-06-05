@@ -287,16 +287,24 @@ def load_config(project_dir: str) -> dict:
     """Load callosum.yaml from project directory (falls back to mempal.yaml)."""
     import yaml
 
-    config_path = Path(project_dir).expanduser().resolve() / "callosum.yaml"
+    project_path = Path(project_dir).expanduser().resolve()
+    config_path = project_path / "callosum.yaml"
     if not config_path.exists():
         # Fallback to legacy name
-        legacy_path = Path(project_dir).expanduser().resolve() / "mempal.yaml"
+        legacy_path = project_path / "mempal.yaml"
         if legacy_path.exists():
             config_path = legacy_path
         else:
-            raise FileNotFoundError(
-                f"No callosum.yaml found in {project_dir}. Run: Callosum init {project_dir}"
-            )
+            # Auto-generate
+            wing_name = project_path.name.lower().replace(" ", "_").replace("-", "_")
+            default_yaml = f"wing: {wing_name}\nrooms:\n  - name: general\n    keywords: []\n"
+            try:
+                config_path.write_text(default_yaml, encoding="utf-8")
+                print(f"  [+] Auto-generated missing callosum.yaml for {wing_name}")
+            except Exception as e:
+                raise FileNotFoundError(
+                    f"No callosum.yaml found in {project_dir}, and failed to auto-generate: {e}"
+                )
     with open(config_path) as f:
         return yaml.safe_load(f)
 

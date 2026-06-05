@@ -214,7 +214,9 @@ class CallosumConfig:
                 if legacy_path.exists():
                     yaml_path = legacy_path
                 else:
-                    continue
+                    yaml_path = self._ensure_yaml(project_dir)
+                    if not yaml_path:
+                        continue
 
             try:
                 with open(yaml_path, "r", encoding="utf-8") as f:
@@ -254,9 +256,13 @@ class CallosumConfig:
                 continue
             yaml_path = project_dir / "callosum.yaml"
             if not yaml_path.exists():
-                yaml_path = project_dir / "mempal.yaml"
-                if not yaml_path.exists():
-                    continue
+                legacy_path = project_dir / "mempal.yaml"
+                if legacy_path.exists():
+                    yaml_path = legacy_path
+                else:
+                    yaml_path = self._ensure_yaml(project_dir)
+                    if not yaml_path:
+                        continue
             try:
                 with open(yaml_path, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
@@ -266,6 +272,22 @@ class CallosumConfig:
             except Exception:
                 pass
         return workspaces
+
+    def _ensure_yaml(self, project_dir: Path) -> Path:
+        """Create a default callosum.yaml if it doesn't exist."""
+        # Ignore hidden directories like .git or node_modules
+        if project_dir.name.startswith(".") or project_dir.name in {"node_modules", "__pycache__", "venv", ".venv"}:
+            return None
+            
+        yaml_path = project_dir / "callosum.yaml"
+        try:
+            wing_name = project_dir.name.lower().replace(" ", "_").replace("-", "_")
+            default_yaml = f"wing: {wing_name}\nrooms:\n  - name: general\n    keywords: []\n"
+            yaml_path.write_text(default_yaml, encoding="utf-8")
+            return yaml_path
+        except Exception as e:
+            print(f"  [Warning] Failed to auto-generate {yaml_path}: {e}")
+            return None
 
     def init(self):
         """Create config directory and write default config.json if it doesn't exist."""
