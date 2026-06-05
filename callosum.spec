@@ -38,8 +38,6 @@ a = Analysis(
     datas=[
         # Include our built-in linguistic data
         ('callosum/data/*.json', 'callosum/data'),
-        # Include our assets
-        ('assets/*', 'assets'),
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
