@@ -152,7 +152,7 @@ def chunk_ag_transcript(content: str) -> list:
         if source in ("USER_EXPLICIT", "USER_IMPLICIT"):
             if "<USER_REQUEST>" in text:
                 text = text.split("<USER_REQUEST>")[-1].split("</USER_REQUEST>")[0].strip()
-            
+
             # Flush previous exchange
             if current_exchange:
                 chunks.append("\n\n".join(current_exchange))

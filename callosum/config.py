@@ -278,7 +278,7 @@ class CallosumConfig:
         # Ignore hidden directories like .git or node_modules
         if project_dir.name.startswith(".") or project_dir.name in {"node_modules", "__pycache__", "venv", ".venv"}:
             return None
-            
+
         yaml_path = project_dir / "callosum.yaml"
         try:
             wing_name = project_dir.name.lower().replace(" ", "_").replace("-", "_")
