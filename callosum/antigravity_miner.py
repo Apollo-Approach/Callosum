@@ -129,6 +129,52 @@ def chunk_content(content: str, max_chunk_size: int = 2000) -> list:
     return chunks
 
 
+def chunk_ag_transcript(content: str) -> list:
+    """Parse Antigravity transcript.jsonl into conversation chunks (Q&A pairs)."""
+    chunks = []
+    current_exchange = []
+
+    for line in content.strip().split("\n"):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        source = event.get("source")
+        text = event.get("content", "").strip()
+
+        if not text:
+            continue
+
+        # Extract user input
+        if source in ("USER_EXPLICIT", "USER_IMPLICIT"):
+            if "<USER_REQUEST>" in text:
+                text = text.split("<USER_REQUEST>")[-1].split("</USER_REQUEST>")[0].strip()
+            
+            # Flush previous exchange
+            if current_exchange:
+                chunks.append("\n\n".join(current_exchange))
+            current_exchange = [f"User: {text}"]
+
+        # Extract model conversational replies
+        elif source == "MODEL":
+            etype = event.get("type", "")
+            # We only want conversational replies, not raw tool outputs like LIST_DIRECTORY
+            if etype in ("PLANNER_RESPONSE", "TEXT_RESPONSE", "CHAT_RESPONSE", "MESSAGE_TO_USER") and text:
+                if "<EPHEMERAL_MESSAGE>" in text:
+                    text = text.split("<EPHEMERAL_MESSAGE>")[0].strip()
+                if text:
+                    current_exchange.append(f"AI: {text}")
+
+    if current_exchange:
+        chunks.append("\n\n".join(current_exchange))
+
+    # Filter out very short chunks
+    return [c for c in chunks if len(c) > MIN_CONTENT_LENGTH]
+
+
 def detect_wing_from_content(content: str, filename: str) -> str:
     """Auto-detect which project wing this artifact belongs to based on content."""
     content_lower = content[:5000].lower()
@@ -350,6 +396,19 @@ def scan_brain_directory(brain_path: Path) -> dict:
                         }
                     )
 
+        # 3. Scan transcripts
+        transcript_file = conversation_dir / ".system_generated" / "logs" / "transcript.jsonl"
+        if transcript_file.exists():
+            items.append(
+                {
+                    "type": "transcript",
+                    "path": transcript_file,
+                    "metadata": {"ArtifactType": "transcript"},
+                    "versions": [],
+                    "conversation_id": conversation_id,
+                }
+            )
+
         if items:
             catalog[conversation_id] = items
 
@@ -451,7 +510,11 @@ def mine_antigravity(
             status = "new" if dry_run else file_needs_update(collection, source_file, content_hash)
 
             # Chunk the content
-            chunks = chunk_content(content)
+            if item["type"] == "transcript":
+                chunks = chunk_ag_transcript(content)
+                item_room = "conversation"
+            else:
+                chunks = chunk_content(content)
 
             if status == "unchanged":
                 skipped += len(chunks)
