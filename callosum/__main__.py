@@ -1,5 +1,5 @@
 """Allow running as: python -m callosum"""
 
-from .cli import main
+from callosum.cli import main
 
 main()
