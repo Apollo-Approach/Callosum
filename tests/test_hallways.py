@@ -76,6 +76,7 @@ def _make_mock_collection(metadatas):
     """Build a MagicMock ChromaDB collection returning the given metadatas."""
     col = MagicMock()
     col.get.return_value = {"metadatas": metadatas}
+    col.count.return_value = len(metadatas)
     return col
 
 
