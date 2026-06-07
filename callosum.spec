@@ -11,6 +11,7 @@ hiddenimports = [
     'chromadb.api',
     'chromadb.telemetry.posthog',
     'chromadb.utils.embedding_functions',
+    'chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2',
     'chromadb.app',
     'chromadb.config',
     'chromadb.db',
