@@ -18,9 +18,6 @@ from collections import defaultdict
 import chromadb
 from .chroma_compat import fix_palace_before_open, validate_palace_fts5
 
-from .normalize import normalize
-
-
 # File types that might contain conversations
 CONVO_EXTENSIONS = {
     ".txt",
@@ -304,23 +301,17 @@ def mine_convos(
             files_skipped += 1
             continue
 
-        # Normalize format
+        # Read file content
         try:
-            content = normalize(str(filepath))
-        except (OSError, ValueError):
+            content = filepath.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
             continue
 
         if not content or len(content.strip()) < MIN_CHUNK_SIZE:
             continue
 
-        # Chunk -- either exchange pairs or general extraction
-        if extract_mode == "general":
-            from .general_extractor import extract_memories
-
-            chunks = extract_memories(content)
-            # Each chunk already has memory_type; use it as the room name
-        else:
-            chunks = chunk_exchanges(content)
+        # Chunk using exchange pairs
+        chunks = chunk_exchanges(content)
 
         if not chunks:
             continue

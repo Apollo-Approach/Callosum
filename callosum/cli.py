@@ -41,28 +41,9 @@ from .config import CallosumConfig  # noqa: E402
 
 
 def cmd_init(args):
-    import json
-    from pathlib import Path
-    from .entity_detector import scan_for_detection, detect_entities, confirm_entities
     from .room_detector_local import detect_rooms_local
 
-    # Pass 1: auto-detect people and projects from file content
-    print(f"\n  Scanning for entities in: {args.dir}")
-    files = scan_for_detection(args.dir)
-    if files:
-        print(f"  Reading {len(files)} files...")
-        detected = detect_entities(files)
-        total = len(detected["people"]) + len(detected["projects"]) + len(detected["uncertain"])
-        if total > 0:
-            confirmed = confirm_entities(detected, yes=getattr(args, "yes", False))
-            # Save confirmed entities to <project>/entities.json for the miner
-            if confirmed["people"] or confirmed["projects"]:
-                entities_path = Path(args.dir).expanduser().resolve() / "entities.json"
-                with open(entities_path, "w") as f:
-                    json.dump(confirmed, f, indent=2)
-                print(f"  Entities saved: {entities_path}")
-        else:
-            print("  No entities detected -- proceeding with directory-based rooms.")
+    print(f"\n  Scanning for rooms in: {args.dir}")
 
     # Pass 2: detect rooms from folder structure
     detect_rooms_local(project_dir=args.dir, yes=getattr(args, "yes", False))
@@ -130,16 +111,7 @@ def cmd_search(args):
 
 def cmd_wakeup(args):
     """Show L0 (identity) + L1 (essential story) -- the wake-up context."""
-    from .layers import MemoryStack
-
-    palace_path = os.path.expanduser(args.palace) if args.palace else CallosumConfig().palace_path
-    stack = MemoryStack(palace_path=palace_path)
-
-    text = stack.wake_up(wing=args.wing)
-    tokens = len(text) // 4
-    print(f"Wake-up text (~{tokens} tokens):")
-    print("=" * 50)
-    print(text)
+    print("Wake-up layer abstraction is deprecated in Callosum. Please use the MCP server.")
 
 
 def cmd_watch(args):
@@ -175,24 +147,7 @@ def cmd_watch(args):
 
 
 def cmd_split(args):
-    """Split concatenated transcript mega-files into per-session files."""
-    from .split_mega_files import main as split_main
-
-    # Rebuild argv for split_mega_files argparse
-    argv = ["--source", args.dir]
-    if args.output_dir:
-        argv += ["--output-dir", args.output_dir]
-    if args.dry_run:
-        argv.append("--dry-run")
-    if args.min_sessions != 2:
-        argv += ["--min-sessions", str(args.min_sessions)]
-
-    old_argv = sys.argv
-    sys.argv = ["Callosum split"] + argv
-    try:
-        split_main()
-    finally:
-        sys.argv = old_argv
+    print("Mega-file splitting is handled dynamically in Callosum.")
 
 
 def cmd_status(args):
